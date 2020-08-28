@@ -8118,7 +8118,6 @@ NaN 12.3   33.0
         self,
         shuffle_amount,
         labels=None,
-        replace=False,
         group_tuples: bool = False,
         inplace: bool = False
     ):
@@ -8130,11 +8129,8 @@ NaN 12.3   33.0
 
         Parameters
         ----------
-        noise_amount : double
+        shuffle_amount : double
             The percentage of each column to be shuffled
-        replace : bool, default False
-            Whether to replace indexes while randomly swapping.
-            If true, may duplicate values
         labels : single label or list-like
             Index or column labels to shuffle.
         group_tuples : bool, default False
@@ -8179,22 +8175,8 @@ NaN 12.3   33.0
         8  8  8  8
         9  9  0  9
 
-        >>> df2 = shuffle(df, noise_amount = .2, labels = 'b', replace=True)
+        >>> df2 = df.shuffle(.2, ['b','c'], group_tuples = True)
         >>> df2
-           a  b  c
-        0  0  0  0
-        1  1  5  1
-        2  2  2  2
-        3  3  3  3
-        4  4  3  4
-        5  5  5  5
-        6  6  5  6
-        7  7  7  7
-        8  8  3  8
-        9  9  9  9
-
-        >>> df3 = df.shuffle(.2, ['b','c'], group_tuples = True)
-        >>> df3
            a  b  c
         0  0  0  0
         1  1  1  1
@@ -8222,14 +8204,13 @@ NaN 12.3   33.0
         9  9  9  9
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        replace = validate_bool_kwarg(replace, "replace")
 
         df_length = len(self)
         swap_length = int(round(len(self) * shuffle_amount))
 
         result = self.copy(deep=True)
         if group_tuples:
-            swaps_array = choice(df_length, swap_length * 2, replace=replace)
+            swaps_array = choice(df_length, swap_length * 2, replace=False)
             swaps = swaps_array[len(swaps_array) // 2:]
             swaps_with = swaps_array[:len(swaps_array) // 2]
             for i in range(len(swaps)):
@@ -8239,7 +8220,7 @@ NaN 12.3   33.0
                     = result.loc[swi, labels], result.loc[si, labels]
         else:
             for column in labels:
-                swaps_array = choice(df_length, swap_length * 2, replace=replace)
+                swaps_array = choice(df_length, swap_length * 2, replace=False)
                 swaps = swaps_array[len(swaps_array) // 2:]
                 swaps_with = swaps_array[:len(swaps_array) // 2]
                 for i in range(len(swaps)):
