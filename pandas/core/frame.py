@@ -39,6 +39,7 @@ import warnings
 
 import numpy as np
 import numpy.ma as ma
+from numpy.random import choice
 
 from pandas._config import get_option
 
@@ -8112,6 +8113,146 @@ NaN 12.3   33.0
             )
         else:
             return self
+
+    def shuffle(
+        self,
+        shuffle_amount,
+        labels=None,
+        replace=False,
+        group_tuples: bool = False,
+        inplace: bool = False
+    ):
+        """
+        Shuffles values in dataframe (along an axis).
+
+        Returns a new shuffled DataFrame if `inplace` argument is
+        ``false``, otherwise updates the original DataFrame and returns None.
+
+        Parameters
+        ----------
+        noise_amount : double
+            The percentage of each column to be shuffled
+        replace : bool, default False
+            Whether to replace indexes while randomly swapping.
+            If true, may duplicate values
+        labels : single label or list-like
+            Index or column labels to shuffle.
+        group_tuples : bool, default False
+            Whether to shuffle labels independently or together
+        inplace : bool, default False
+            If true, perform operation in-place
+
+        Returns
+        -------
+        DataFrame
+            Shuffled values
+
+        Examples
+        --------
+        >>> df = pd.DataFrame({'a': range(10),
+        ...                    'b': range(10),
+        ...                    'c': range(10)})
+        >>> df
+           a  b  c
+        0  0  0  0
+        1  1  1  1
+        2  2  2  2
+        3  3  3  3
+        4  4  4  4
+        5  5  5  5
+        6  6  6  6
+        7  7  7  7
+        8  8  8  8
+        9  9  9  9
+
+        >>> df1 = df.shuffle(.2, 'b')
+        >>> df1
+           a  b  c
+        0  0  9  0
+        1  1  4  1
+        2  2  2  2
+        3  3  3  3
+        4  4  1  4
+        5  5  5  5
+        6  6  6  6
+        7  7  7  7
+        8  8  8  8
+        9  9  0  9
+
+        >>> df2 = shuffle(df, noise_amount = .2, labels = 'b', replace=True)
+        >>> df2
+           a  b  c
+        0  0  0  0
+        1  1  5  1
+        2  2  2  2
+        3  3  3  3
+        4  4  3  4
+        5  5  5  5
+        6  6  5  6
+        7  7  7  7
+        8  8  3  8
+        9  9  9  9
+
+        >>> df3 = df.shuffle(.2, ['b','c'], group_tuples = True)
+        >>> df3
+           a  b  c
+        0  0  0  0
+        1  1  1  1
+        2  2  7  7
+        3  3  3  3
+        4  4  6  6
+        5  5  5  5
+        6  6  4  4
+        7  7  2  2
+        8  8  8  8
+        9  9  9  9
+
+        >>> df.shuffle(.3, 'b', inplace=True)
+        >>> df
+           a  b  c
+        0  0  1  0
+        1  1  0  1
+        2  2  5  2
+        3  3  6  3
+        4  4  4  4
+        5  5  2  5
+        6  6  3  6
+        7  7  7  7
+        8  8  8  8
+        9  9  9  9
+        """
+        inplace = validate_bool_kwarg(inplace, "inplace")
+        replace = validate_bool_kwarg(replace, "replace")
+
+        df_length = len(self)
+        swap_length = int(round(len(self) * shuffle_amount))
+
+        result = self.copy(deep=True)
+        if group_tuples:
+            swaps_array = choice(df_length, swap_length * 2, replace=replace)
+            swaps = swaps_array[len(swaps_array) // 2:]
+            swaps_with = swaps_array[:len(swaps_array) // 2]
+            for i in range(len(swaps)):
+                si = result.index[swaps[i]]
+                swi = result.index[swaps_with[i]]
+                result.loc[si, labels], result.loc[swi, labels]\
+                    = result.loc[swi, labels], result.loc[si, labels]
+        else:
+            for column in labels:
+                swaps_array = choice(df_length, swap_length * 2, replace=replace)
+                swaps = swaps_array[len(swaps_array) // 2:]
+                swaps_with = swaps_array[:len(swaps_array) // 2]
+                for i in range(len(swaps)):
+                    si = result.index[swaps[i]]
+                    swi = result.index[swaps_with[i]]
+
+                    result.loc[si, column], result.loc[swi, column]\
+                        = result.loc[swi, column], result.loc[si, column]
+        if inplace:
+            self._update_inplace(result)
+            return None
+        else:
+            return result
 
     # ----------------------------------------------------------------------
     # Statistical methods, etc.
